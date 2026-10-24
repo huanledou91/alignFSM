@@ -1,0 +1,157 @@
+Key Elements and Terms of the Service Contract
+Service Provider: The service provider is <provider>, registered at <Address1>, contactable via <Num1>.
+Client: The client is <client>, registered at <Address2>, contactable via <Num2>.
+Service Description: The provider agrees to perform <serviceType> services for the client in exchange for <serviceFee> as compensation.
+Completion Deadline: The service must be completed by <completionDate>, with confirmation required by <confirmDate>.
+
+Service Provider' s Rights and Obligations
+Obligation to deliverService: The provider shall complete the service as agreed by <completionDate>, and notify the client upon completion.
+Obligation to correctIssues: If the client raises concerns about the service quality before <confirmDate>, the provider shall make reasonable corrections.
+Right to receivePayment: The provider is entitled to receive <serviceFee> upon service completion and client confirmation.
+Client' s Rights and Obligations
+Obligation to payDeposit: The client shall pay <0.3 * serviceFee> as a deposit upon contract signing.
+Obligation to confirmCompletion: Upon receiving notice of service completion, the client shall confirm the service status by <confirmDate>.
+Obligation to makePayment: After confirming completion, the client shall pay <0.7 * serviceFee> to the provider.
+Right to requestRefund: If the provider fails to complete the service by <completionDate>, the client has the right to request a refund of <0.3 * serviceFee>.
+
+SCoT prompt
+Service Contract Description
+Initialization Parameters:
+#These are constructor parameters that initialize the contract's state variables.
+provider; client; serviceType; serviceFee; completionDate; confirmDate
+Events:
+#Events are key action points in a contract and are used to record important events during the execution of a contract.
+ServiceStarted; ServiceCompleted; IssueRaised; CorrectionMade; PaymentReleased; DepositRefunded
+Functions:
+only client do {
+	#Check if the deposit has already been paid.
+	if !depositPaid then:
+		#Pay deposit upon contract signing.
+		payDeposit() { depositPaid = true; payable(provider).transfer(0.3 * serviceFee); emit ServiceStarted; }
+	#Check if the service has been completed.
+	if serviceCompleted then:
+		#Confirm the service completion.
+		confirmCompletion() { confirmed = true; emit ServiceCompleted; }
+	#Ensure confirmation is done before final payment.
+	if confirmed then:
+		#Release remaining payment to provider.
+		makePayment() { payable(provider).transfer(0.7 * serviceFee); emit PaymentReleased; }
+	#Check if the service was not completed on time.
+	if block.timestamp > completionDate and !serviceCompleted then:
+		#Request refund of the deposit.
+		requestRefund() { payable(client).transfer(0.3 * serviceFee); emit DepositRefunded; }
+}
+only provider do {
+	#Ensure service completion by the agreed deadline.
+	if block.timestamp <= completionDate then:
+		#Mark the service as completed and notify the client.
+		deliverService() { serviceCompleted = true; emit ServiceCompleted; }
+	#Allow provider to make corrections if issues are raised before confirmDate.
+	if block.timestamp <= confirmDate then:
+		#Perform necessary corrections.
+		correctIssues() { correctionsMade = true; emit CorrectionMade; }
+ }
+
+Smart Contract in Solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract ServiceContract {
+    address public provider;
+    address public client;
+    string public serviceType;
+    uint256 public serviceFee;
+    uint256 public completionDate;
+    uint256 public confirmDate;
+    bool public depositPaid;
+    bool public serviceCompleted;
+    bool public confirmed;
+    bool public correctionsMade;
+
+    event ServiceStarted(address client, uint256 depositAmount);
+    event ServiceCompleted(address provider);
+    event IssueRaised(address client);
+    event CorrectionMade(address provider);
+    event PaymentReleased(address provider, uint256 paymentAmount);
+    event DepositRefunded(address client, uint256 refundAmount);
+
+    modifier onlyClient() {
+        require(msg.sender == client, "Only the client can call this function.");
+        _;
+    }
+
+    modifier onlyProvider() {
+        require(msg.sender == provider, "Only the provider can call this function.");
+        _;
+    }
+
+    constructor(
+        address _provider,
+        address _client,
+        string memory _serviceType,
+        uint256 _serviceFee,
+        uint256 _completionDate,
+        uint256 _confirmDate
+    ) {
+        provider = _provider;
+        client = _client;
+        serviceType = _serviceType;
+        serviceFee = _serviceFee;
+        completionDate = _completionDate;
+        confirmDate = _confirmDate;
+        depositPaid = false;
+        serviceCompleted = false;
+        confirmed = false;
+        correctionsMade = false;
+    }
+
+    function payDeposit() public payable onlyClient {
+        require(!depositPaid, "Deposit has already been paid.");
+        require(msg.value >= (serviceFee * 3) / 10, "Insufficient deposit amount.");
+
+        depositPaid = true;
+        payable(provider).transfer((serviceFee * 3) / 10);
+        emit ServiceStarted(client, (serviceFee * 3) / 10);
+    }
+
+    function deliverService() public onlyProvider {
+        require(depositPaid, "Deposit must be paid before service starts.");
+        require(block.timestamp <= completionDate, "Service deadline has passed.");
+
+        serviceCompleted = true;
+        emit ServiceCompleted(provider);
+    }
+
+    function confirmCompletion() public onlyClient {
+        require(serviceCompleted, "Service has not been completed.");
+        confirmed = true;
+        emit ServiceCompleted(provider);
+    }
+
+    function makePayment() public payable onlyClient {
+        require(confirmed, "Service must be confirmed before final payment.");
+        require(msg.value >= (serviceFee * 7) / 10, "Insufficient payment amount.");
+
+        payable(provider).transfer((serviceFee * 7) / 10);
+        emit PaymentReleased(provider, (serviceFee * 7) / 10);
+    }
+
+    function requestRefund() public onlyClient {
+        require(block.timestamp > completionDate, "Service deadline has not passed.");
+        require(!serviceCompleted, "Service has already been completed.");
+
+        depositPaid = false;
+        payable(client).transfer((serviceFee * 3) / 10);
+        emit DepositRefunded(client, (serviceFee * 3) / 10);
+    }
+
+    function correctIssues() public onlyProvider {
+        require(block.timestamp <= confirmDate, "Correction period has expired.");
+        require(!confirmed, "Service has already been confirmed.");
+
+        correctionsMade = true;
+        emit CorrectionMade(provider);
+    }
+
+    receive() external payable {}
+}

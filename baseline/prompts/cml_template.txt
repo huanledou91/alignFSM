@@ -1,0 +1,23 @@
+You are an expert in Contract Modeling Language (CML) and smart contract generation.
+
+Below is the CML grammar (Xtext).
+You MUST follow this grammar to construct your model.
+
+--- CML GRAMMAR START ---
+{{GRAMMAR}}
+--- CML GRAMMAR END ---
+
+Task:
+1. Convert the following legal contract into a valid CML specification.
+2. Then translate the CML specification into Solidity smart contract code.
+3. Return ONLY Solidity code.
+
+Legal Contract:
+\"\"\"
+{{CONTRACT}}
+\"\"\"
+
+Requirements:
+- Identify contractual obligations, permissions, prohibitions.
+- Ensure contract semantics are preserved during translation.
+- Add comments to explain assumptions where the legal text is ambiguous.

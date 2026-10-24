@@ -1,0 +1,139 @@
+Key Elements and Terms of the Lending Contract
+Lender: The lender is <lender>, registered at <Address1>, contactable via <Num1>.
+Borrower: The borrower is <borrower>, registered at <Address2>, contactable via <Num2>.
+Loan Amount: <loanAmount> at an interest rate of <interestRate>%.
+Repayment Due Date: <dueDate>.
+
+Lender' s Rights and Obligations
+Obligation to issueLoan: The lender shall transfer <loanAmount> to the borrower upon contract signing.
+Right to receiveRepayment: The lender has the right to receive <loanAmount> + interest from the borrower by <dueDate>.
+Right to chargePenalty: If the borrower fails to repay on time, the lender may impose a penalty of <penaltyRate>% per overdue day.
+Borrower' s Rights and Obligations
+Obligation to repayLoan: The borrower shall repay <loanAmount> + interest to the lender by <dueDate>.
+Right to earlyRepayment: The borrower has the right to repay early without additional fees, subject to lender’s approval.
+Obligation to payPenalty: If the repayment is overdue, the borrower must pay an additional penalty fee based on <penaltyRate>% per day.
+
+SCoT prompt
+Lending Contract Description
+initialization Parameters:
+#These are constructor parameters that initialize the contract's state variables.
+borrower; loanAmount; interestRate; dueDate; penaltyRate
+events:
+#Events are key action points in a contract and are used to record important events during the execution of a contract.
+LoanIssued; RepaymentMade; PenaltyCharged; EarlyRepaymentMade
+functions:
+only lender do {
+	#Check if the loan has already been issued.
+	if !loanIssued then:
+		#Issue the loan amount to the borrower.
+		issueLoan() { loanIssued = true; payable(borrower).transfer(loanAmount); emit LoanIssued; }
+	#Check if the loan is overdue and not yet repaid.
+	if loanIssued and !loanRepaid and block.timestamp > dueDate then:
+		#Charge penalty for overdue payment.
+		chargePenalty() { penaltyAmount = (loanAmount * penaltyRate / 100) * (block.timestamp - dueDate) / 1 days; emit PenaltyCharged; }
+ }
+
+only borrower do {
+	#Ensure the loan has been issued and is not yet repaid.
+	if loanIssued and !loanRepaid then:
+		#Repay the loan with interest.
+		repayLoan() { totalDue = loanAmount + (loanAmount * interestRate / 100); loanRepaid = true; payable(lender).transfer(totalDue);
+		emit RepaymentMade; }
+	#Check if early repayment is allowed.
+	if loanIssued and !loanRepaid and block.timestamp < dueDate then:
+		#Allow early repayment without penalty (lender approval required).
+		earlyRepayment() { totalDue = loanAmount + (loanAmount * interestRate / 100); loanRepaid = true; payable(lender).transfer(totalDue);
+	        emit EarlyRepaymentMade; }
+}
+
+Smart Contract in Solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract LendingContract {
+    address public lender;
+    address public borrower;
+    uint256 public loanAmount;
+    uint256 public interestRate;
+    uint256 public dueDate;
+    uint256 public penaltyRate;
+    bool public loanIssued;
+    bool public loanRepaid;
+
+    event LoanIssued(address borrower, uint256 amount);
+    event RepaymentMade(address borrower, uint256 amount);
+    event PenaltyCharged(address borrower, uint256 penaltyAmount, uint256 overdueDays);
+    event EarlyRepaymentMade(address borrower, uint256 amount);
+
+    modifier onlyLender() {
+        require(msg.sender == lender, "Only lender can call this function.");
+        _;
+    }
+
+    modifier onlyBorrower() {
+        require(msg.sender == borrower, "Only borrower can call this function.");
+        _;
+    }
+
+    modifier loanNotRepaid() {
+        require(!loanRepaid, "Loan has already been repaid.");
+        _;
+    }
+
+    constructor(
+        address _borrower,
+        uint256 _loanAmount,
+        uint256 _interestRate,
+        uint256 _dueDate,
+        uint256 _penaltyRate
+    ) {
+        lender = msg.sender;
+        borrower = _borrower;
+        loanAmount = _loanAmount;
+        interestRate = _interestRate;
+        dueDate = _dueDate;
+        penaltyRate = _penaltyRate;
+        loanIssued = false;
+        loanRepaid = false;
+    }
+
+    function issueLoan() public onlyLender {
+        require(!loanIssued, "Loan has already been issued.");
+        loanIssued = true;
+        payable(borrower).transfer(loanAmount);
+        emit LoanIssued(borrower, loanAmount);
+    }
+
+    function repayLoan() public payable onlyBorrower loanNotRepaid {
+        require(loanIssued, "Loan has not been issued.");
+        uint256 interest = (loanAmount * interestRate) / 100;
+        uint256 totalDue = loanAmount + interest;
+
+        require(msg.value >= totalDue, "Insufficient amount to repay the loan.");
+        loanRepaid = true;
+        payable(lender).transfer(totalDue);
+        emit RepaymentMade(borrower, totalDue);
+    }
+
+    function chargePenalty() public onlyLender loanNotRepaid {
+        require(block.timestamp > dueDate, "Loan is not overdue yet.");
+        uint256 overdueDays = (block.timestamp - dueDate) / 1 days;
+        uint256 penaltyAmount = (loanAmount * penaltyRate / 100) * overdueDays;
+
+        payable(lender).transfer(penaltyAmount);
+        emit PenaltyCharged(borrower, penaltyAmount, overdueDays);
+    }
+
+    function earlyRepayment() public payable onlyBorrower loanNotRepaid {
+        require(loanIssued, "Loan has not been issued.");
+        uint256 interest = (loanAmount * interestRate) / 100;
+        uint256 totalDue = loanAmount + interest;
+
+        require(msg.value >= totalDue, "Insufficient amount to repay the loan.");
+        loanRepaid = true;
+        payable(lender).transfer(totalDue);
+        emit EarlyRepaymentMade(borrower, totalDue);
+    }
+
+    receive() external payable {}
+}

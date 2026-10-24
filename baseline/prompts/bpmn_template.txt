@@ -1,0 +1,23 @@
+You are an expert BPMN modeler and smart contract engineer.
+
+Below are several few-shot BPMN examples that show how contracts are modeled.
+Use THEM as patterns to model the new contract.
+
+--- FEW-SHOT EXAMPLES START ---
+{{FEWSHOT}}
+--- FEW-SHOT EXAMPLES END ---
+
+Task:
+1. Convert the following legal contract into a textual BPMN process description.
+2. Then convert the BPMN description into Solidity smart contract code.
+3. Output ONLY Solidity.
+
+Legal Contract:
+\"\"\"
+{{CONTRACT}}
+\"\"\"
+
+Guidelines:
+- Identify activities, gateways, events, sequences.
+- Respect contract obligations and conditions.
+- The resulting Solidity must be compilable and reflect BPMN workflow logic.

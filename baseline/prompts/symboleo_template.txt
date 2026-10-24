@@ -1,0 +1,23 @@
+You are an expert in Symboleo legal contract modeling and smart contract generation.
+
+Below is the official Symboleo Xtext grammar.
+Use it STRICTLY to construct a valid Symboleo contract model.
+
+--- SYMBOLEO GRAMMAR START ---
+{{GRAMMAR}}
+--- SYMBOLEO GRAMMAR END ---
+
+Task:
+1. Convert the following legal contract into a valid Symboleo specification.
+2. Then convert the Symboleo specification into Solidity smart contract code.
+3. Output ONLY Solidity code. Do not output the Symboleo model unless needed.
+
+Legal Contract:
+\"\"\"
+{{CONTRACT}}
+\"\"\"
+
+Requirements:
+- Ensure all obligations, powers, events, and states are mapped.
+- Ensure the final Solidity is compilable and follows pragma solidity ^0.8.x.
+- Use clear comments that trace clauses back to the contract text.

@@ -1,0 +1,109 @@
+Key Elements and Terms of the Voting Contract
+Contract Owner: The contract owner is <owner>, responsible for managing the voting process.
+Eligible Voters: The voters are registered in <map_voters>, ensuring only authorized participants can vote.
+Candidates: The election includes candidates listed in <candidateList>.
+
+Owner' s Rights and Obligations
+Right to registerVoter: The owner has the right to register a new voter if they have not been registered.
+Obligation to startVoting: The owner must initiate the voting process by setting votingLive = true.
+Obligation to endVoting: The owner must end the voting process when it is complete by setting votingLive = false.
+Right to totalVotesFor: After voting ends, the owner has the right to check and display the final vote count for each candidate.
+Voter' s Rights and Obligations
+Right to vote: If the voter is registered and voting is active, they can cast a vote for a valid candidate.
+Obligation to followVotingRules: The voter must ensure they cast their vote only during the active voting period.
+
+
+Voting Contract Description
+initialization parameters:
+#These are constructor parameters that initialize the contract's state variables.
+map_voters; candidateList;
+events:
+#Events are key action points in a contract and are used to record important events during the execution of a contract.
+VoterRegistered; VoteCasted; VotingStarted; VotingEnded;
+functions:
+only owner do {
+    #Check if the newly added voter has already registered.
+    if !map_voters[_voter] then:
+       #Register a new voter.
+        registerVoter(_voter) { map_voters[_voter] = true; emit VoterRegistered;};
+    #Check if the voting has already begun.
+    if !votingLive:
+       #Start the voting process.
+        startVoting() {votingLive = true; emit VotingStarted;};
+    #Check if the vote is currently in progress.
+    if votingLive:
+       #End the voting process, ensuring it's currently live.
+        endVoting() {votingLive = false; emit VotingEnded;};
+    #Check if the voting has concluded.
+    if !votingLive:
+       #Show the final votes for each candidate.
+        totalVotesFor(){for candidate_num in candidateList: return candidateList[candidate_num ];}
+}
+only registered voters do {
+#Determine if the voter is registered and the voting is still ongoing.
+if map_voters[_voter] and votingLive then:
+       #Cast a vote for a valid candidate during the voting period.
+        vote(candidate_num ) { candidateList[candidate_num ]++ ; emit VoteCasted;};
+}
+
+
+
+Please generate the corresponding smart legal contract based on the provided information about the legal contract.
+
+SLC in solidity:
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+contract VotingContract {
+    // State variables
+    address public owner;
+    mapping(address => bool) public voters;
+    uint256[] public candidateList;
+    bool public votingLive;
+
+    // Events
+    event VoterRegistered(address voter);
+    event VoteCasted(address voter, uint256 candidate);
+    event VotingStarted();
+    event VotingEnded();
+
+    // Constructor
+    constructor(uint256[] memory _candidateList) {
+        owner = msg.sender;
+        candidateList = _candidateList;
+        votingLive = false;
+    }
+    // Modifiers
+    modifier onlyOwner() {
+        require(msg.sender == owner, “Only owner can call this function.”);  _;
+    }
+    modifier onlyRegisteredVoter() {
+        require(voters[msg.sender], “Only registered voters can call this function.”);  _;
+    }
+
+    // Functions
+    function registerVoter(address _voter) public onlyOwner {
+        require(!voters[_voter], "Voter is already registered.");
+        voters[_voter] = true;
+        emit VoterRegistered(_voter);
+    }
+    function startVoting() public onlyOwner {
+        require(!votingLive, "Voting has already started.");
+        votingLive = true;
+        emit VotingStarted();
+    }
+    function endVoting() public onlyOwner {
+        require(votingLive, "Voting is not live.");
+        votingLive = false;
+        emit VotingEnded();
+    }
+    function vote(uint256 _candidateNum) public onlyRegisteredVoter {
+        require(votingLive, "Voting is not live.");
+        require(_candidateNum < candidateList.length, "Invalid candidate number.");
+        candidateList[_candidateNum]++;
+        emit VoteCasted(msg.sender, _candidateNum);
+    }
+    function totalVotesFor(uint256 _candidateNum) public view returns (uint256) {
+        require(_candidateNum < candidateList.length, "Invalid candidate number.");
+        return candidateList[_candidateNum];
+    }
+}
